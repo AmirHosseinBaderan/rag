@@ -137,3 +137,84 @@ def test_top_k_controls_result_count_without_changing_best_match():
     scores = [result["score"] for result in results_3]
 
     assert scores == sorted(scores, reverse=True)
+
+@pytest.mark.integration
+def test_metadata_filter_limits_results():
+    embedder = OllamaEmbedder(
+        model="nomic-embed-text:latest",
+        base_url="http://192.168.0.247:11434",
+    )
+
+    vector_store = QdrantVectorStore(
+        collection_name="test-metadata-filter",
+        vector_size=768,
+        host="192.168.0.247",
+        port=6333,
+    )
+
+    documents = [
+        Document(
+            id="fastapi-doc",
+            content=(
+                "FastAPI is a Python web framework for building APIs."
+            ),
+            metadata={
+                "category": "backend",
+                "source": "fastapi.md",
+            },
+        ),
+        Document(
+            id="qdrant-doc",
+            content=(
+                "Qdrant is a vector database for similarity search."
+            ),
+            metadata={
+                "category": "database",
+                "source": "qdrant.md",
+            },
+        ),
+        Document(
+            id="docker-doc",
+            content=(
+                "Docker packages applications into portable containers."
+            ),
+            metadata={
+                "category": "devops",
+                "source": "docker.md",
+            },
+        ),
+    ]
+
+    chunker = Chunker(
+        chunk_size=500,
+        overlap=0,
+    )
+
+    indexer = DocumentIndexer(
+        chunker=chunker,
+        embedder=embedder,
+        vector_store=vector_store,
+    )
+
+    for document in documents:
+        indexer.index(document)
+
+    retriever = Retriever(
+        embedder=embedder,
+        vector_store=vector_store,
+    )
+
+    results = retriever.retrieve(
+        query="How do I build an API with Python?",
+        top_k=3,
+        metadata_filter={
+            "category": "backend",
+        },
+    )
+
+    assert len(results) == 1
+
+    result = results[0]
+
+    assert result["metadata"]["category"] == "backend"
+    assert result["metadata"]["source"] == "fastapi.md"
