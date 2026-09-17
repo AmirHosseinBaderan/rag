@@ -11,7 +11,8 @@ class Retriever:
     def retrieve(
             self,
             query:str,
-            top_k:int
+            top_k:int,
+            score_threshold: float | None = None,
     )-> list[dict]:
         if not query.strip():
             raise ValueError(
@@ -23,9 +24,15 @@ class Retriever:
                 "top_k must be greater than zero"
             )
 
+        if score_threshold is not None and not 0 <= score_threshold <= 1:
+            raise ValueError(
+                "score_threshold must be between 0 and 1"
+            )
+
         vector = self._embedder.embed(query)
         return self._vector_store.search(
             vector=vector,
-            top_k=top_k
+            top_k=top_k,
+            score_threshold=score_threshold
         )
         

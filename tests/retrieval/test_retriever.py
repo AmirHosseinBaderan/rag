@@ -12,6 +12,7 @@ class FakeVectorStore(VectorStore):
     def __init__(self) -> None:
         self.received_vector = None
         self.received_top_k = None
+        self.last_score_threshold = None
 
     def upsert(
         self,
@@ -25,9 +26,11 @@ class FakeVectorStore(VectorStore):
         self,
         vector: list[float],
         top_k: int,
+        score_threshold:float|None = None
     ) -> list[dict]:
         self.received_vector = vector
         self.received_top_k = top_k
+        self.last_score_threshold = score_threshold
 
         return [
             {
@@ -111,3 +114,20 @@ def test_retriever_rejects_invalid_top_k() -> None:
         assert False
     except ValueError:
         pass
+
+def test_retrieve_passes_score_threshold_to_vector_store():
+    embedder = FakeEmbedder()
+    vector_store = FakeVectorStore()
+
+    retriever = Retriever(
+        embedder=embedder,
+        vector_store=vector_store,
+    )
+
+    retriever.retrieve(
+        query="test query",
+        top_k=3,
+        score_threshold=0.8,
+    )
+
+    assert vector_store.last_score_threshold == 0.8

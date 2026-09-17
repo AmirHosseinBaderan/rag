@@ -15,6 +15,7 @@ class VectorStore(ABC):
     def search(
         self,
         vector:list[float],
-        top_k:int
+        top_k:int,
+        score_threshold: float | None = None,
     )-> list[dict[str,Any]]:
         raise NotImplementedError

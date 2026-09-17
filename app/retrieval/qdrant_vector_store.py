@@ -70,11 +70,13 @@ class QdrantVectorStore(VectorStore):
         self,
         vector: list[float],
         top_k: int,
+        score_threshold: float | None = None,
     ) -> list[dict[str, Any]]:
         results = self._client.query_points(
             collection_name=self._collection_name,
             query=vector,
             limit=top_k,
+            score_threshold=score_threshold
         )
 
         return [
