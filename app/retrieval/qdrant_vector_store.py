@@ -101,7 +101,7 @@ class QdrantVectorStore(VectorStore):
     
         return [
             {
-                "id": str(point.id),
+                "id": point.payload.get("vector_id", str(point.id)),
                 "score": point.score,
                 "metadata": point.payload or {},
             }
