@@ -1,4 +1,5 @@
 import pytest
+from uuid import uuid4
 
 from app.domain.documents.document import Document
 from app.ingestion.chunker import Chunker
@@ -16,7 +17,7 @@ def test_retrieval_returns_results_in_score_order():
     )
 
     vector_store = QdrantVectorStore(
-        collection_name="test-retrieval-quality",
+        collection_name=f"test-retrieval-quality-{uuid4()}",
         vector_size=768,
         host="192.168.0.247",
         port=6333,
@@ -75,7 +76,7 @@ def test_top_k_controls_result_count_without_changing_best_match():
     )
 
     vector_store = QdrantVectorStore(
-        collection_name="test-top-k",
+        collection_name=f"test-top-k-{uuid4()}",
         vector_size=768,
         host="192.168.0.247",
         port=6333,
@@ -146,7 +147,7 @@ def test_metadata_filter_limits_results():
     )
 
     vector_store = QdrantVectorStore(
-        collection_name="test-metadata-filter",
+        collection_name=f"test-metadata-filter-{uuid4()}",
         vector_size=768,
         host="192.168.0.247",
         port=6333,
@@ -218,3 +219,102 @@ def test_metadata_filter_limits_results():
 
     assert result["metadata"]["category"] == "backend"
     assert result["metadata"]["source"] == "fastapi.md"
+
+@pytest.mark.integration
+def test_score_threshold_and_metadata_filter_work_together():
+    embedder = OllamaEmbedder(
+        model="nomic-embed-text:latest",
+        base_url="http://192.168.0.247:11434",
+    )
+
+    vector_store = QdrantVectorStore(
+        collection_name=f"test-filter-and-threshold-{uuid4()}",
+        vector_size=768,
+        host="192.168.0.247",
+        port=6333,
+    )
+
+    documents = [
+        Document(
+            id="fastapi-doc",
+            content=(
+                "FastAPI is a Python web framework for building APIs."
+            ),
+            metadata={
+                "category": "backend",
+                "source": "fastapi.md",
+            },
+        ),
+        Document(
+            id="database-doc",
+            content=(
+                "PostgreSQL is a relational database system."
+            ),
+            metadata={
+                "category": "database",
+                "source": "postgresql.md",
+            },
+        ),
+        Document(
+            id="docker-doc",
+            content=(
+                "Docker packages applications into portable containers."
+            ),
+            metadata={
+                "category": "devops",
+                "source": "docker.md",
+            },
+        ),
+    ]
+
+    chunker = Chunker(
+        chunk_size=500,
+        overlap=0,
+    )
+
+    indexer = DocumentIndexer(
+        chunker=chunker,
+        embedder=embedder,
+        vector_store=vector_store,
+    )
+
+    for document in documents:
+        indexer.index(document)
+
+    retriever = Retriever(
+        embedder=embedder,
+        vector_store=vector_store,
+    )
+
+    query = "How do I build an API with Python?"
+
+    baseline_results = retriever.retrieve(
+        query=query,
+        top_k=3,
+        metadata_filter={
+            "category": "backend",
+        },
+    )
+
+    assert len(baseline_results) == 1
+
+    baseline_score = baseline_results[0]["score"]
+
+    score_threshold = baseline_score - 0.001
+
+    results = retriever.retrieve(
+        query=query,
+        top_k=3,
+        score_threshold=score_threshold,
+        metadata_filter={
+            "category": "backend",
+        },
+    )
+
+    assert len(results) == 1
+
+    result = results[0]
+
+    assert result["metadata"]["category"] == "backend"
+    assert result["metadata"]["source"] == "fastapi.md"
+    assert result["score"] >= score_threshold
