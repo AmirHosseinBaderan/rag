@@ -3,6 +3,11 @@ from uuid import uuid4
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import PointStruct, VectorParams
+from qdrant_client.models import (
+    FieldCondition,
+    Filter,
+    MatchValue,
+)
 
 from app.retrieval.vector_store import VectorStore
 
@@ -71,14 +76,29 @@ class QdrantVectorStore(VectorStore):
         vector: list[float],
         top_k: int,
         score_threshold: float | None = None,
+        metadata_filter: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
+        query_filter = None
+    
+        if metadata_filter:
+            query_filter = Filter(
+                must=[
+                    FieldCondition(
+                        key=key,
+                        match=MatchValue(value=value),
+                    )
+                    for key, value in metadata_filter.items()
+                ]
+            )
+    
         results = self._client.query_points(
             collection_name=self._collection_name,
             query=vector,
             limit=top_k,
-            score_threshold=score_threshold
+            score_threshold=score_threshold,
+            query_filter=query_filter,
         )
-
+    
         return [
             {
                 "id": str(point.id),

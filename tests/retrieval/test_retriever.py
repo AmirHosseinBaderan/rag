@@ -13,6 +13,7 @@ class FakeVectorStore(VectorStore):
         self.received_vector = None
         self.received_top_k = None
         self.last_score_threshold = None
+        self.last_metadata_filter = None
 
     def upsert(
         self,
@@ -26,11 +27,13 @@ class FakeVectorStore(VectorStore):
         self,
         vector: list[float],
         top_k: int,
-        score_threshold:float|None = None
+        score_threshold:float|None = None,
+        metadata_filter:dict|None = None
     ) -> list[dict]:
         self.received_vector = vector
         self.received_top_k = top_k
         self.last_score_threshold = score_threshold
+        self.last_metadata_filter = metadata_filter
 
         return [
             {
@@ -131,3 +134,25 @@ def test_retrieve_passes_score_threshold_to_vector_store():
     )
 
     assert vector_store.last_score_threshold == 0.8
+
+def test_retrieve_passes_metadata_filter_to_vector_store():
+    embedder = FakeEmbedder()
+    vector_store = FakeVectorStore()
+
+    retriever = Retriever(
+        embedder=embedder,
+        vector_store=vector_store,
+    )
+
+    metadata_filter = {
+        "category": "backend",
+        "source": "fastapi.md",
+    }
+
+    retriever.retrieve(
+        query="dependency injection",
+        top_k=3,
+        metadata_filter=metadata_filter,
+    )
+
+    assert vector_store.last_metadata_filter == metadata_filter

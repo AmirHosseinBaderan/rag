@@ -13,6 +13,7 @@ class Retriever:
             query:str,
             top_k:int,
             score_threshold: float | None = None,
+            metadata_filter: dict | None = None,
     )-> list[dict]:
         if not query.strip():
             raise ValueError(
@@ -33,6 +34,7 @@ class Retriever:
         return self._vector_store.search(
             vector=vector,
             top_k=top_k,
-            score_threshold=score_threshold
+            score_threshold=score_threshold,
+            metadata_filter=metadata_filter
         )
         
