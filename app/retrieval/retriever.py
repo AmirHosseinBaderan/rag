@@ -8,7 +8,7 @@ class Retriever:
         self._embedder = embedder
         self._vector_store = vector_store
 
-    def retriever(
+    def retrieve(
             self,
             query:str,
             top_k:int
