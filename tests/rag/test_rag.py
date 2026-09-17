@@ -2,6 +2,7 @@ from app.generation.llm import LLM
 from app.rag.context_builder import ContextBuilder
 from app.retrieval.retriever import Retriever
 from app.rag.rag import RAG
+from app.generation.prompt_builder import PromptBuilder
 
 
 class FakeRetriever(Retriever):
@@ -45,6 +46,7 @@ def test_rag_generates_answer_from_retrieved_context() -> None:
     rag = RAG(
         retriever=retriever,
         context_builder=context_builder,
+        prompt_builder=PromptBuilder(),
         llm=llm,
     )
 
