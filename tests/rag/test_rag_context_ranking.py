@@ -49,6 +49,7 @@ def test_rag_uses_ranked_context():
         context_builder=context_builder,
         prompt_builder=prompt_builder,
         llm=llm,
+        context_ranker=ranker
     )
 
     results = retriever.retrieve(
