@@ -546,3 +546,62 @@ def test_rag_limits_context_before_generation():
     assert result == "answer"
     assert "first context" in llm.prompt
     assert "second context" not in llm.prompt
+
+def test_rag_returns_controlled_answer_when_no_results_are_found():
+    class EmptyRetriever:
+        def retrieve(self, query: str, top_k: int):
+            return []
+
+    class FakeLLM:
+        def __init__(self):
+            self.called = False
+
+        def generate(self, prompt: str) -> str:
+            self.called = True
+            return "hallucinated answer"
+
+    llm = FakeLLM()
+
+    rag = RAG(
+        retriever=EmptyRetriever(),
+        context_ranker=ContextRanker(),
+        context_builder=ContextBuilder(),
+        prompt_builder=PromptBuilder(),
+        llm=llm,
+    )
+
+    result = rag.ask("What is Python?")
+
+    assert result == (
+        "I don't have enough context to answer this question."
+    )
+
+    assert llm.called is False
+
+def test_rag_with_sources_returns_empty_sources_when_no_results_are_found():
+    class EmptyRetriever:
+        def retrieve(self, query: str, top_k: int):
+            return []
+
+    class FakeLLM:
+        def generate(self, prompt: str) -> str:
+            raise AssertionError(
+                "LLM should not be called without context"
+            )
+
+    rag = RAG(
+        retriever=EmptyRetriever(),
+        context_ranker=ContextRanker(),
+        context_builder=ContextBuilder(),
+        prompt_builder=PromptBuilder(),
+        llm=FakeLLM(),
+    )
+
+    response = rag.ask_with_sources(
+        query="What is Python?",
+    )
+
+    assert response.answer == (
+        "I don't have enough context to answer this question."
+    )
+    assert response.sources == []

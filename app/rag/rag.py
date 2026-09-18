@@ -8,6 +8,10 @@ from app.rag.rag_response import RAGResponse, RAGSource
 from app.rag.context_limiter import ContextLimiter
 
 class RAG:
+    _NO_CONTEXT_ANSWER = (
+        "I don't have enough context to answer this question."
+    )
+
     def __init__(
         self,
         retriever: Retriever,
@@ -70,6 +74,9 @@ class RAG:
                 top_k=top_k,
             )
 
+        if not results:
+            return self._NO_CONTEXT_ANSWER
+
         ranked_results = self._context_ranker.rank(
             results,
             top_n=top_k,
@@ -126,6 +133,12 @@ class RAG:
                 query=query,
                 results=results,
                 top_k=top_k,
+            )
+
+        if not results:
+            return RAGResponse(
+                answer=self._NO_CONTEXT_ANSWER,
+                sources=[],
             )
     
         ranked_results = self._context_ranker.rank(
