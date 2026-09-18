@@ -1,15 +1,7 @@
-from dataclasses import dataclass
-
 from app.evaluation.dataset import EvaluationDataset
 from app.evaluation.exact_match import ExactMatch
-
-
-@dataclass(frozen=True)
-class EvaluationResult:
-    question: str
-    expected_answer: str
-    actual_answer: str
-    score: float
+from app.evaluation.report import EvaluationReport
+from app.evaluation.result import EvaluationResult
 
 
 class EvaluationRunner:
@@ -24,11 +16,13 @@ class EvaluationRunner:
     def run(
         self,
         dataset: EvaluationDataset,
-    ) -> list[EvaluationResult]:
+    ) -> EvaluationReport:
         results: list[EvaluationResult] = []
 
         for case in dataset.cases:
-            actual_answer = self._rag.ask(case.question)
+            actual_answer = self._rag.ask(
+                case.question
+            )
 
             score = self._evaluator.evaluate(
                 expected=case.expected_answer,
@@ -44,4 +38,4 @@ class EvaluationRunner:
                 )
             )
 
-        return results
+        return EvaluationReport(results)

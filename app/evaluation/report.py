@@ -1,4 +1,4 @@
-from app.evaluation.runner import EvaluationResult
+from app.evaluation.result import EvaluationResult
 
 
 class EvaluationReport:
