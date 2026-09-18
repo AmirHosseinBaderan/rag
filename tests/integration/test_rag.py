@@ -10,6 +10,7 @@ from app.retrieval.ollama_embedder import OllamaEmbedder
 from app.retrieval.qdrant_vector_store import QdrantVectorStore
 from app.retrieval.retriever import Retriever
 from app.generation.prompt_builder import PromptBuilder
+from app.rag.context_ranker import ContextRanker
 
 
 def test_rag_end_to_end() -> None:
@@ -68,10 +69,11 @@ def test_rag_end_to_end() -> None:
     )
 
     rag = RAG(
-        retriever=retriever,
-        context_builder=context_builder,
-        prompt_builder=PromptBuilder(),
-        llm=llm,
+       retriever=retriever,
+       context_ranker=ContextRanker(),
+       context_builder=ContextBuilder(),
+       prompt_builder=PromptBuilder(),
+       llm=llm,
     )
 
     answer = rag.ask(

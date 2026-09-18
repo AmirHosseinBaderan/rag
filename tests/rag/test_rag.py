@@ -605,3 +605,29 @@ def test_rag_with_sources_returns_empty_sources_when_no_results_are_found():
         "I don't have enough context to answer this question."
     )
     assert response.sources == []
+
+def test_ask_with_trace_returns_response_and_trace():
+    class EmptyRetriever:
+        def retrieve(self, query: str, top_k: int):
+            return []
+            
+    rag = RAG(
+            retriever=EmptyRetriever(),
+            context_ranker=ContextRanker(),
+            context_builder=ContextBuilder(),
+            prompt_builder=PromptBuilder(),
+            llm=FakeLLM(),
+        )
+
+    result = rag.ask_with_trace(
+        query="What is Python?",
+        top_k=2,
+        retrieval_k=4,
+    )
+
+    assert result.response.answer == "Generated answer" or result.response.answer == "I don't have enough context to answer this question."
+    assert result.trace.query == "What is Python?"
+    assert result.trace.retrieved_count == 0
+    assert result.trace.final_context_count == 0
+    assert result.trace.retrieval_duration_ms >= 0
+    assert result.trace.generation_duration_ms >= 0
