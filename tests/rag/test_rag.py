@@ -492,3 +492,57 @@ def test_ask_with_sources_returns_answer_and_sources():
     assert response.sources[1].document_id == "doc-2"
     assert response.sources[1].source == "java.txt"
     assert response.sources[1].score == 0.80
+
+def test_rag_limits_context_before_generation():
+    from app.rag.context_limiter import ContextLimiter
+
+    class FakeRetriever:
+        def retrieve(self, query: str, top_k: int):
+            return [
+                {
+                    "id": "first",
+                    "score": 0.9,
+                    "metadata": {
+                        "source": "first.txt",
+                        "text": "first context",
+                    },
+                },
+                {
+                    "id": "second",
+                    "score": 0.8,
+                    "metadata": {
+                        "source": "second.txt",
+                        "text": "second context",
+                    },
+                }
+            ]
+
+    class FakeLLM:
+        def __init__(self):
+            self.prompt = ""
+
+        def generate(self, prompt: str) -> str:
+            self.prompt = prompt
+            return "answer"
+
+    llm = FakeLLM()
+
+    rag = RAG(
+        retriever=FakeRetriever(),
+        context_ranker=ContextRanker(),
+        context_builder=ContextBuilder(),
+        prompt_builder=PromptBuilder(),
+        llm=llm,
+        context_limiter=ContextLimiter(
+            max_characters=len("first context"),
+        ),
+    )
+
+    result = rag.ask(
+        query="question",
+        top_k=2,
+    )
+
+    assert result == "answer"
+    assert "first context" in llm.prompt
+    assert "second context" not in llm.prompt

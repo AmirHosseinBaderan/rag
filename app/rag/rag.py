@@ -5,6 +5,7 @@ from app.rag.context_compressor import ContextCompressor
 from app.rag.context_ranker import ContextRanker
 from app.retrieval.retriever import Retriever
 from app.rag.rag_response import RAGResponse, RAGSource
+from app.rag.context_limiter import ContextLimiter
 
 class RAG:
     def __init__(
@@ -18,6 +19,7 @@ class RAG:
         reranker=None,
         context_compressor: ContextCompressor | None = None,
         multi_query_retriever=None,
+        context_limiter: ContextLimiter | None = None,
     ) -> None:
         self._retriever = retriever
         self._context_ranker = context_ranker
@@ -28,6 +30,7 @@ class RAG:
         self._reranker = reranker
         self._context_compressor = context_compressor
         self._multi_query_retriever = multi_query_retriever
+        self._context_limiter = context_limiter
 
     def ask(
         self,
@@ -71,6 +74,11 @@ class RAG:
             results,
             top_n=top_k,
         )
+
+        if self._context_limiter is not None:
+            ranked_results = self._context_limiter.limit(
+                ranked_results,
+            )
 
         context = self._context_builder.build(ranked_results)
 
@@ -124,6 +132,11 @@ class RAG:
             results,
             top_n=top_k,
         )
+
+        if self._context_limiter is not None:
+            ranked_results = self._context_limiter.limit(
+                ranked_results,
+            )
     
         context = self._context_builder.build(ranked_results)
     
